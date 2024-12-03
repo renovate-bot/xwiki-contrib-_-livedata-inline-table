@@ -21,6 +21,7 @@
 # Maven
 target
 target-eclipse
+*.versionsBackup
 
 # Gradle
 build
