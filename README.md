@@ -11,4 +11,4 @@ Display a simple XWiki Syntax table with LiveData.
 * License: LGPL 2.1
 * Translations: N/A
 * Sonar Dashboard: [![Status](https://sonarcloud.io/api/project_badges/measure?project=org.xwiki.contrib:livedata-inline-table&metric=alert_status)](https://sonarcloud.io/dashboard?id=org.xwiki.contrib:livedata-inline-table)
-* Continuous Integration Status: [![Build Status](https://ci.xwiki.org/job/XWiki%20Contrib/job/(project id on ci)/job/master/badge/icon)](https://ci.xwiki.org/job/XWiki%20Contrib/job/(projct id on ci)/job/master/)
+* Continuous Integration Status: [![Build Status](https://ci.xwiki.org/job/XWiki%20Contrib/job/livedata-inline-table/job/master/badge/icon)](https://ci.xwiki.org/job/XWiki%20Contrib/job/livedata-inline-table/job/master/)
