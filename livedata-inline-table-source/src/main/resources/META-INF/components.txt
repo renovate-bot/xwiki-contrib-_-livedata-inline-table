@@ -1,0 +1,3 @@
+org.xwiki.contrib.internal.InlineTableLiveDataSource
+org.xwiki.contrib.internal.InlineTableLiveDataConfigurationResolver
+org.xwiki.contrib.internal.InlineTableLiveDataConfigurationProvider
