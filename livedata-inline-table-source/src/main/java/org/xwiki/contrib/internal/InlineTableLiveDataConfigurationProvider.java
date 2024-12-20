@@ -19,9 +19,6 @@
  */
 package org.xwiki.contrib.internal;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
@@ -31,7 +28,6 @@ import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataEntryDescriptor;
 import org.xwiki.livedata.LiveDataMeta;
 import org.xwiki.livedata.LiveDataPaginationConfiguration;
-import org.xwiki.livedata.LiveDataPropertyDescriptor;
 
 /**
  * Configuration of the {@link InlineTableLiveDataSource}.
@@ -51,41 +47,16 @@ public class InlineTableLiveDataConfigurationProvider implements Provider<LiveDa
         LiveDataConfiguration input = new LiveDataConfiguration();
         LiveDataMeta meta = new LiveDataMeta();
         LiveDataPaginationConfiguration pagination = new LiveDataPaginationConfiguration();
-        pagination.setShowPageSizeDropdown(true);
+        // We do not support pagination and display the whole table directly.
+        pagination.setShowPageSizeDropdown(false);
         meta.setPagination(pagination);
+        // LiveData expects one of the fields to be a unique id. We introduce one ourselves that is not displayed.
         LiveDataEntryDescriptor entryDescriptor = new LiveDataEntryDescriptor();
         entryDescriptor.setIdProperty("_inline_id");
         input.setMeta(meta);
         meta.setEntryDescriptor(entryDescriptor);
 
-        List<LiveDataPropertyDescriptor> propertyDescriptors = new ArrayList<>();
-
-        for (int i = 0; i < 100; i++) {
-            propertyDescriptors.add(buildLiveDataPropertyDescriptor("" + i));
-        }
-
-        meta.setPropertyDescriptors(propertyDescriptors);
-
+        // We do not set any property descriptor. They are to be defined using the advanced LiveData configuration JSON.
         return input;
-    }
-
-    /**
-     * a.
-     * 
-     * @param field
-     * @return
-     */
-    private LiveDataPropertyDescriptor buildLiveDataPropertyDescriptor(String field)
-    {
-        LiveDataPropertyDescriptor pd = new LiveDataPropertyDescriptor();
-        pd.setId(field);
-        pd.setName(field);
-        pd.setDescription("");
-        pd.setType("String");
-        pd.setSortable(false);
-        pd.setEditable(false);
-        pd.setFilterable(true);
-        pd.setVisible(true);
-        return pd;
     }
 }

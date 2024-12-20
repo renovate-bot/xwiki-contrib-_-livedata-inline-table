@@ -29,13 +29,18 @@ import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang.math.IntRange;
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
+import org.xwiki.rendering.block.MetaDataBlock;
 import org.xwiki.rendering.block.TableBlock;
 import org.xwiki.rendering.block.TableCellBlock;
+import org.xwiki.rendering.block.TableHeadCellBlock;
 import org.xwiki.rendering.block.TableRowBlock;
 import org.xwiki.rendering.block.match.AnyBlockMatcher;
 import org.xwiki.rendering.macro.AbstractMacro;
@@ -45,11 +50,14 @@ import org.xwiki.rendering.macro.descriptor.DefaultContentDescriptor;
 import org.xwiki.rendering.renderer.BlockRenderer;
 import org.xwiki.rendering.renderer.printer.DefaultWikiPrinter;
 import org.xwiki.rendering.renderer.printer.WikiPrinter;
+import org.xwiki.rendering.syntax.Syntax;
+import org.xwiki.rendering.syntax.SyntaxType;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.stability.Unstable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xpn.xwiki.XWikiContext;
 
 /**
  * Macro to display a simple XWiki Syntax table with LiveData.
@@ -73,12 +81,83 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
     @Named("plain/1.0")
     private BlockRenderer plainTextRenderer;
 
+    @Inject
+    private Provider<XWikiContext> xcontextProvider;
+
+    @Inject
+    private Logger logger;
+
+    /**
+     * The parsed representation of a table.
+     * 
+     * @version $Id$
+     */
+    private static class ParsedTable
+    {
+        private List<String> fields;
+
+        private List<Map<String, Object>> entries;
+
+        /**
+         * Constructor.
+         * 
+         * @param fields The fields of the table.
+         * @param entries The entries of table.
+         */
+        ParsedTable(List<String> fields, List<Map<String, Object>> entries)
+        {
+            this.setFields(fields);
+            this.setEntries(entries);
+        }
+
+        /**
+         * Gets the fields of the table.
+         * 
+         * @return the fields of the table.
+         */
+        public List<String> getFields()
+        {
+            return this.fields;
+        }
+
+        /**
+         * Sets the fields of the table.
+         * 
+         * @param fields the fields of the table.
+         */
+        public void setFields(List<String> fields)
+        {
+            this.fields = fields;
+        }
+
+        /**
+         * Gets the entries of the table.
+         * 
+         * @return the entries of the table.
+         */
+        public List<Map<String, Object>> getEntries()
+        {
+            return this.entries;
+        }
+
+        /**
+         * Sets the entries of the table.
+         * 
+         * @param entries The entries of the table.
+         */
+        public void setEntries(List<Map<String, Object>> entries)
+        {
+            this.entries = entries;
+        }
+    }
+
     /**
      * Constructor.
      */
     public LiveDataInlineTableMacro()
     {
-        super("Live Data Table Source", "Contains a table that can be displayed in live data.",
+        super("Live Data Table Source",
+            "Contains a table that can be displayed in live data. Making it filterable and sortable.",
             new DefaultContentDescriptor("Content", true, Block.LIST_BLOCK_TYPE),
             LiveDataInlineTableMacroParameters.class);
     }
@@ -93,12 +172,29 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
     public List<Block> execute(LiveDataInlineTableMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        // When in WYSIWYG edit mode, it should be possible to edit underlying table using the WYSIWYG.
+        // When in view mode, we should use liveData to display the table.
+        // Check if we are in edit mode.
+        // See https://www.xwiki.org/xwiki/bin/view/FAQ/How%20to%20write%20Macro%20code%20for%20the%20edit%20mode
+        Syntax targetSyntax = context.getTransformationContext().getTargetSyntax();
+        XWikiContext xcontext = xcontextProvider.get();
+
+        if (targetSyntax != null) {
+            SyntaxType targetSyntaxType = targetSyntax.getType();
+            if (SyntaxType.ANNOTATED_HTML.equals(targetSyntaxType)
+                || SyntaxType.ANNOTATED_XHTML.equals(targetSyntaxType)) {
+                return parseContent(content, context);
+            }
+        }
+        if ("get".equals(xcontext.getAction()) || "edit".equals(xcontext.getAction())) {
+            return parseContent(content, context);
+        }
 
         // Parse the table.
         List<Block> parsedContent = parseReadOnlyContent(content, context);
-        List<Object> fieldsAndEntries = tableToMap(findTable(parsedContent));
-        List<String> fields = (List<String>) fieldsAndEntries.get(0);
-        List<Map<String, Object>> entries = (List<Map<String, Object>>) fieldsAndEntries.get(1);
+        ParsedTable parsedTable = tableToMap(findTable(parsedContent), parameters);
+        List<String> fields = parsedTable.getFields();
+        List<Map<String, Object>> entries = parsedTable.getEntries();
 
         // Convert the entries and fields to JSON in order to pass them to LiveData.
         String entriesJson = "";
@@ -121,9 +217,10 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
         String ldJson = "";
         try {
             ldJson = buildJSON(Map.of("query",
-                Map.of("properties", fields, "source",
+                Map.of("properties", (new IntRange(0, fields.size() - 1)).toArray(), "source",
                     Map.of(ID, InlineTableLiveDataSource.ID, "entries", entriesB64, "fields", fieldsB64), "offset", 0,
-                    "limit", 10)));
+                    "limit", 10),
+                "meta", Map.of("propertyDescriptors", getPropertyDescriptors(fields))));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
             throw new MacroExecutionException("Failed to serialize the LiveData parameters.");
@@ -131,8 +228,27 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
 
         // Call LiveData with the computed parameters.
         String id = parameters.getId();
+        logger.info("ldJson: " + ldJson);
         return Collections.singletonList(new MacroBlock("liveData",
             id == null ? Collections.emptyMap() : Map.of(ID, parameters.getId()), ldJson, context.isInline()));
+    }
+
+    /**
+     * Generate the list of property descriptors for the given fields.
+     * 
+     * @param fields the name of the fields
+     * @return the list of property descriptor for the given fields
+     */
+    private List<Object> getPropertyDescriptors(List<String> fields)
+    {
+        List<Object> result = new ArrayList<>();
+
+        for (int i = 0; i < fields.size(); i++) {
+            String field = fields.get(i);
+            result.add(Map.of(ID, "" + i, "name", field, "sortable", true, "filterable", true));
+        }
+
+        return result;
     }
 
     /**
@@ -174,9 +290,10 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
      * Read a table and extract entries from it.
      * 
      * @param table The root of the table to read.
+     * @param parameters The macro parameters.
      * @return The extracted list of properties and entries.
      */
-    private List<Object> tableToMap(TableBlock table)
+    private ParsedTable tableToMap(TableBlock table, LiveDataInlineTableMacroParameters parameters)
     {
         // Extract the rows from the table while counting the number of properties.
         List<TableRowBlock> rows = new ArrayList<>();
@@ -191,7 +308,6 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
         }
 
         // Define the properties, i.e. the header of the table.
-        // TODO: Optionally extract the header from the first row.
         List<String> properties = new ArrayList<>();
         for (int i = 0; i < propertiesCount; i++) {
             properties.add("" + i);
@@ -199,6 +315,7 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
 
         // Extract the entries from the rows.
         List<Map<String, Object>> entries = new ArrayList<>();
+        boolean inlineHeading = false;
         for (TableRowBlock row : rows) {
             Map<String, Object> entry = new HashMap<>();
             int i = 0;
@@ -208,14 +325,21 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
                     // We need to render the content of the cell as a string so that we can pass it to LiveData.
                     WikiPrinter printer = new DefaultWikiPrinter();
                     plainTextRenderer.render(cell, printer);
-                    entry.put(properties.get(i), printer.toString());
+                    if (entries.isEmpty() && child instanceof TableHeadCellBlock) {
+                        properties.set(i, printer.toString());
+                        inlineHeading = true;
+                    }
+                    entry.put("" + i, printer.toString());
                     i++;
                 }
             }
             entries.add(entry);
         }
+        if (inlineHeading) {
+            entries.remove(0);
+        }
 
-        return List.of(properties, entries);
+        return new ParsedTable(properties, entries);
     }
 
     /**
@@ -230,6 +354,22 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
         throws MacroExecutionException
     {
         return contentParser.parse(content, context, true, context.isInline()).getChildren();
+    }
+
+    /**
+     * Parse the content string to XDOM. This wraps the content in a MetaDataBlock.
+     * 
+     * @param content The string to parse to XDOM.
+     * @param context The current transformation context.
+     * @return The parsed XDOM.
+     * @throws MacroExecutionException
+     */
+    private List<Block> parseContent(String content, MacroTransformationContext context) throws MacroExecutionException
+    {
+        // Don't execute transformations explicitly. They'll be executed on the generated content later on.
+        List<Block> children = contentParser.parse(content, context, false, context.isInline()).getChildren();
+
+        return Collections.singletonList(new MetaDataBlock(children, this.getNonGeneratedContentMetaData()));
     }
 
 }

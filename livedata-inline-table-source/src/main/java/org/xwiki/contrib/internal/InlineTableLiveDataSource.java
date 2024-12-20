@@ -19,6 +19,7 @@
  */
 package org.xwiki.contrib.internal;
 
+import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
@@ -45,16 +46,21 @@ public class InlineTableLiveDataSource extends WithParameters implements LiveDat
      */
     public static final String ID = "inlineTableLiveData";
 
+    @Inject
+    @Named(ID)
+    private LiveDataEntryStore liveDataEntryStore;
+
     @Override
     public LiveDataEntryStore getEntries()
     {
-        return new InlineTableLiveDataEntryStore(this);
+        return liveDataEntryStore;
     }
 
     @Override
     public LiveDataPropertyDescriptorStore getProperties()
     {
-        return new InlineTableLiveDataPropertyDescriptorStore(this);
+        // We do not set any property descriptor. They are to be defined using the advanced LiveData configuration JSON.
+        return null;
     }
 
 }

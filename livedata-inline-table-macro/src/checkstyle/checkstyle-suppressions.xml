@@ -25,8 +25,5 @@
     "http://www.puppycrawl.com/dtds/suppressions_1_0.dtd">
 
 <suppressions>
-  <suppress checks="CyclomaticComplexity" files="InlineTableLiveDataEntryStore.java"/>
-  <suppress checks="NPathComplexity" files="InlineTableLiveDataEntryStore.java"/>
-  <suppress checks="JavaNCSS" files="InlineTableLiveDataEntryStore.java"/>
-  <suppress checks="ExecutableStatementCount" files="InlineTableLiveDataEntryStore.java"/>
+  <suppress checks="ClassFanOutComplexity" files="LiveDataInlineTableMacro.java"/>
 </suppressions>

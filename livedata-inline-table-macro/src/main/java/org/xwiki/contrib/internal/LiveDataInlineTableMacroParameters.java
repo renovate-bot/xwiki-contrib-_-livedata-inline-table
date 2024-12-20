@@ -20,14 +20,23 @@
 package org.xwiki.contrib.internal;
 
 /**
+ * Inline Table Livedata macro parameters.
+ * 
  * @version $Id$
  */
 public class LiveDataInlineTableMacroParameters
 {
     private String id;
 
+    private LiveDataInlineTableMacroHeaderDetectionParameter headerDetection =
+        LiveDataInlineTableMacroHeaderDetectionParameter.REMOVE;
+
+    private String header;
+
     /**
-     * @return a.
+     * Gets the id Parameter.
+     * 
+     * @return The id parameter.
      */
     public String getId()
     {
@@ -35,10 +44,52 @@ public class LiveDataInlineTableMacroParameters
     }
 
     /**
-     * @param id
+     * Sets the id parameter.
+     * 
+     * @param id the id parameter.
      */
     public void setId(String id)
     {
         this.id = id;
+    }
+
+    /**
+     * Gets the header detection parameter.
+     * 
+     * @return the header detection parameter.
+     */
+    public LiveDataInlineTableMacroHeaderDetectionParameter getHeaderDetection()
+    {
+        return this.headerDetection;
+    }
+
+    /**
+     * Sets the header detection parameter.
+     * 
+     * @param headerDetection
+     */
+    public void setHeaderDetection(LiveDataInlineTableMacroHeaderDetectionParameter headerDetection)
+    {
+        this.headerDetection = headerDetection;
+    }
+
+    /**
+     * Gets the header parameter.
+     * 
+     * @return the header parameter.
+     */
+    public String getHeader()
+    {
+        return this.header;
+    }
+
+    /**
+     * Sets the header parameter.
+     * 
+     * @param header
+     */
+    public void setHeader(String header)
+    {
+        this.header = header;
     }
 }
