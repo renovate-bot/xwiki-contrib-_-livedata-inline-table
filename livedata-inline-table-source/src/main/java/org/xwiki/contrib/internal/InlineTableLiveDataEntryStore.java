@@ -87,8 +87,7 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
         try {
             liveDataSource = componentManager.getInstance(LiveDataSource.class, InlineTableLiveDataSource.ID);
         } catch (ComponentLookupException e) {
-            // TODO Auto-generated catch block
-            return null;
+            throw new LiveDataException("Could not find InlineTableLiveDataSource component.");
         }
 
         // Decode the received entries.

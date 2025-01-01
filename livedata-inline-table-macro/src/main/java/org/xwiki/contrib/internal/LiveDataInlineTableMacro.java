@@ -33,7 +33,6 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.apache.commons.lang.math.IntRange;
-import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
@@ -47,6 +46,7 @@ import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroContentParser;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.macro.descriptor.DefaultContentDescriptor;
+import org.xwiki.rendering.parser.Parser;
 import org.xwiki.rendering.renderer.BlockRenderer;
 import org.xwiki.rendering.renderer.printer.DefaultWikiPrinter;
 import org.xwiki.rendering.renderer.printer.WikiPrinter;
@@ -85,7 +85,8 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
     private Provider<XWikiContext> xcontextProvider;
 
     @Inject
-    private Logger logger;
+    @Named("plain/1.0")
+    private Parser plainTextParser;
 
     /**
      * The parsed representation of a table.
@@ -190,9 +191,15 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
             return parseContent(content, context);
         }
 
-        // Parse the table.
+        // Find the table.
         List<Block> parsedContent = parseReadOnlyContent(content, context);
-        ParsedTable parsedTable = tableToMap(findTable(parsedContent), parameters);
+        TableBlock table = findTable(parsedContent);
+        if (table == null) {
+            throw new MacroExecutionException("Content must contain a table.");
+        }
+
+        // Parse the table.
+        ParsedTable parsedTable = tableToMap(table, parameters);
         List<String> fields = parsedTable.getFields();
         List<Map<String, Object>> entries = parsedTable.getEntries();
 
@@ -228,7 +235,6 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
 
         // Call LiveData with the computed parameters.
         String id = parameters.getId();
-        logger.info("ldJson: " + ldJson);
         return Collections.singletonList(new MacroBlock("liveData",
             id == null ? Collections.emptyMap() : Map.of(ID, parameters.getId()), ldJson, context.isInline()));
     }
