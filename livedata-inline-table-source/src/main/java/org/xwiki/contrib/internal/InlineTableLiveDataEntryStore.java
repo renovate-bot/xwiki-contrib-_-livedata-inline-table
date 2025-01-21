@@ -61,6 +61,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Named(InlineTableLiveDataSource.ID)
 public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
 {
+
+    private static final String TEXT_ID = "text.";
+
     // /**
     // * The InlineTableLiveDataSource object holding the received entries.
     // */
@@ -125,10 +128,9 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
                 String field = it.next();
 
                 String value = entry.get(field).asText();
-
                 // Check the filters for this field.
-                Filter filter = filters.get(field);
-                if (filter != null) {
+                Filter filter = filters.get(StringUtils.substringAfter(field, TEXT_ID));
+                if (filter != null && field.startsWith(TEXT_ID)) {
                     for (Constraint constraint : filter.getConstraints()) {
                         switch (constraint.getOperator()) {
                             case "startsWith":
@@ -166,8 +168,8 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
         // Sorting support.
         Collections.sort(liveData.getEntries(), (Map<String, Object> arg0, Map<String, Object> arg1) -> {
             for (SortEntry sort : query.getSort()) {
-                Object o0 = arg0.get(sort.getProperty());
-                Object o1 = arg1.get(sort.getProperty());
+                Object o0 = arg0.get(TEXT_ID + sort.getProperty());
+                Object o1 = arg1.get(TEXT_ID + sort.getProperty());
 
                 if (o0 == null || o1 == null) {
                     continue;

@@ -28,6 +28,8 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MetaDataBlock;
@@ -71,6 +73,9 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
     @Named("plain/1.0")
     private Parser plainTextParser;
 
+    @Inject
+    private ComponentManager componentManager;
+
     /**
      * Constructor.
      */
@@ -98,6 +103,7 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
         // See https://www.xwiki.org/xwiki/bin/view/FAQ/How%20to%20write%20Macro%20code%20for%20the%20edit%20mode
         Syntax targetSyntax = context.getTransformationContext().getTargetSyntax();
         XWikiContext xcontext = xcontextProvider.get();
+        String renderSyntax = "html/5.0";
 
         if (targetSyntax != null) {
             SyntaxType targetSyntaxType = targetSyntax.getType();
@@ -105,13 +111,19 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
                 || SyntaxType.ANNOTATED_XHTML.equals(targetSyntaxType)) {
                 return parseContent(content, context);
             }
+            renderSyntax = targetSyntax.toIdString();
         }
         if ("get".equals(xcontext.getAction()) || "edit".equals(xcontext.getAction())) {
             return parseContent(content, context);
         }
 
-        return Collections.singletonList(new GroupBlock(parseReadOnlyContent(content, context))
-            .clone(new LiveDataInlineTableMacroBlockFilter(parameters, context, plainTextRenderer)));
+        try {
+            return Collections.singletonList(new GroupBlock(parseReadOnlyContent(content, context))
+                .clone(new LiveDataInlineTableMacroBlockFilter(parameters, context, plainTextRenderer,
+                    componentManager.getInstance(BlockRenderer.class, renderSyntax))));
+        } catch (ComponentLookupException | LiveDataInlineTableMacroRuntimeException e) {
+            throw new MacroExecutionException(e.getMessage(), e);
+        }
     }
 
     /**

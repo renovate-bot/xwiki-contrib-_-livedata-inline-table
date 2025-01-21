@@ -30,6 +30,7 @@ import java.util.Map;
 import org.apache.commons.lang.math.IntRange;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.BlockFilter;
+import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.TableBlock;
 import org.xwiki.rendering.block.TableCellBlock;
@@ -58,18 +59,20 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
 
     private BlockRenderer plainTextRenderer;
 
+    private BlockRenderer richTextRenderer;
+
     private LiveDataInlineTableMacroParameters parameters;
 
     /**
      * Constructor.
      */
     LiveDataInlineTableMacroBlockFilter(LiveDataInlineTableMacroParameters parameters,
-        MacroTransformationContext context, BlockRenderer plainTextRenderer)
+        MacroTransformationContext context, BlockRenderer plainTextRenderer, BlockRenderer richTextRenderer)
     {
         this.parameters = parameters;
         this.context = context;
         this.plainTextRenderer = plainTextRenderer;
-
+        this.richTextRenderer = richTextRenderer;
     }
 
     @Override
@@ -183,7 +186,7 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
                 Map.of("properties", (new IntRange(0, fields.size() - 1)).toArray(), "source",
                     Map.of(ID, InlineTableLiveDataSource.ID, "entries", entriesB64, "fields", fieldsB64), "offset", 0,
                     "limit", 10),
-                "meta", Map.of("propertyDescriptors", getPropertyDescriptors(fields))));
+                "meta", Map.of("propertyDescriptors", getPropertyDescriptors(fields), "defaultDisplayer", "html")));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
             throw new LiveDataInlineTableMacroRuntimeException("Failed to serialize the LiveData parameters.");
@@ -262,14 +265,17 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
             for (Block child : row.getChildren()) {
                 if (child instanceof TableCellBlock) {
                     TableCellBlock cell = (TableCellBlock) child;
-                    // We need to render the content of the cell as a string so that we can pass it to LiveData.
-                    WikiPrinter printer = new DefaultWikiPrinter();
-                    plainTextRenderer.render(cell, printer);
+                    WikiPrinter textPrinter = new DefaultWikiPrinter();
+                    plainTextRenderer.render(cell, textPrinter);
                     if (entries.isEmpty() && child instanceof TableHeadCellBlock) {
-                        properties.set(i, printer.toString());
+                        properties.set(i, textPrinter.toString());
                         inlineHeading = true;
                     }
-                    entry.put("" + i, printer.toString());
+                    // We need to render the content of the cell as a string so that we can pass it to LiveData.
+                    WikiPrinter cellPrinter = new DefaultWikiPrinter();
+                    richTextRenderer.render(new GroupBlock(cell.getChildren(), cell.getParameters()), cellPrinter);
+                    entry.put("" + i, cellPrinter.toString());
+                    entry.put("text." + i, textPrinter.toString());
                     i++;
                 }
             }
