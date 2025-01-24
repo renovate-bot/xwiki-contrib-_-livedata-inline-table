@@ -19,6 +19,8 @@
  */
 package org.xwiki.contrib.internal;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -26,6 +28,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.lang.math.IntRange;
 import org.xwiki.rendering.block.Block;
@@ -175,17 +178,18 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
 
         // Encode the JSON to URLBase64 because it is passed to LiveData as a query parameter.
         String entriesB64 = "";
-        entriesB64 = Base64.getUrlEncoder().encodeToString(entriesJson.getBytes(StandardCharsets.UTF_8));
-        String fieldsB64 = "";
-        fieldsB64 = Base64.getUrlEncoder().encodeToString(fieldsJson.getBytes(StandardCharsets.UTF_8));
+        try {
+            entriesB64 = Base64.getUrlEncoder().encodeToString(compressString(entriesJson));
+        } catch (IOException e) {
+            throw new LiveDataInlineTableMacroRuntimeException("Failed to compress the table entries.");
+        }
 
         // Build the LiveData JSON.
         String ldJson = "";
         try {
             ldJson = buildJSON(Map.of("query",
                 Map.of("properties", (new IntRange(0, fields.size() - 1)).toArray(), "source",
-                    Map.of(ID, InlineTableLiveDataSource.ID, "entries", entriesB64, "fields", fieldsB64), "offset", 0,
-                    "limit", 10),
+                    Map.of(ID, InlineTableLiveDataSource.ID, "entries", entriesB64), "offset", 0, "limit", 10),
                 "meta", Map.of("propertyDescriptors", getPropertyDescriptors(fields), "defaultDisplayer", "html")));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
@@ -196,6 +200,26 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
         String id = parameters.getId();
         return Collections.singletonList(new MacroBlock("liveData",
             id == null ? Collections.emptyMap() : Map.of(ID, parameters.getId()), ldJson, context.isInline()));
+    }
+
+    /**
+     * Compress a string using GZIP.
+     * 
+     * @param str the string to compress
+     * @return the compressed string as bytes.
+     * @throws IOException
+     */
+    private static byte[] compressString(String str) throws IOException
+    {
+        if (str == null || str.length() == 0) {
+            return "".getBytes(StandardCharsets.UTF_8);
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream(str.length());
+        GZIPOutputStream gzip = new GZIPOutputStream(out);
+        gzip.write(str.getBytes(StandardCharsets.UTF_8));
+        gzip.close();
+
+        return out.toByteArray();
     }
 
     /**

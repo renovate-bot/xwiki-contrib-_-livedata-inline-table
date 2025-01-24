@@ -19,6 +19,8 @@
  */
 package org.xwiki.contrib.internal;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Collections;
@@ -27,6 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.zip.GZIPInputStream;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -45,7 +48,6 @@ import org.xwiki.livedata.LiveDataQuery.SortEntry;
 import org.xwiki.livedata.LiveDataSource;
 import org.xwiki.text.StringUtils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -97,13 +99,11 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode entriesNode = null;
         try {
-            String decodedJson = new String(
-                Base64.getUrlDecoder()
-                    .decode(((InlineTableLiveDataSource) liveDataSource).getParameters().get("entries").toString()),
-                StandardCharsets.UTF_8);
+            String decodedJson = decompressString(Base64.getUrlDecoder()
+                .decode(((InlineTableLiveDataSource) liveDataSource).getParameters().get("entries").toString()));
             entriesNode = objectMapper.readTree(decodedJson);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
+        } catch (IOException e) {
+            throw new LiveDataException("Failed to retrieve entries.", e);
         }
 
         // Organize the filter so we can access them by field.
@@ -190,6 +190,23 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
 
         liveData.setCount(liveDataEntries.size());
         return liveData;
+    }
+
+    /**
+     * Compress a string using GZIP.
+     * 
+     * @param str the string to compress
+     * @return the compressed string as bytes.
+     * @throws IOException
+     */
+    private static String decompressString(byte[] bytes) throws IOException
+    {
+        ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+        GZIPInputStream gzip = new GZIPInputStream(in);
+        byte[] out = gzip.readAllBytes();
+        gzip.close();
+
+        return new String(out, StandardCharsets.UTF_8);
     }
 
 }
