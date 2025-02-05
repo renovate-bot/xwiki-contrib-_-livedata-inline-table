@@ -27,6 +27,7 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.xwiki.cache.CacheException;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
@@ -76,6 +77,9 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
     @Inject
     private ComponentManager componentManager;
 
+    @Inject
+    private InlineTableCache inlineTableCache;
+
     /**
      * Constructor.
      */
@@ -120,8 +124,8 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
         try {
             return Collections.singletonList(new GroupBlock(parseReadOnlyContent(content, context))
                 .clone(new LiveDataInlineTableMacroBlockFilter(parameters, context, plainTextRenderer,
-                    componentManager.getInstance(BlockRenderer.class, renderSyntax))));
-        } catch (ComponentLookupException | LiveDataInlineTableMacroRuntimeException e) {
+                    componentManager.getInstance(BlockRenderer.class, renderSyntax), inlineTableCache.getCache())));
+        } catch (ComponentLookupException | LiveDataInlineTableMacroRuntimeException | CacheException e) {
             throw new MacroExecutionException(e.getMessage(), e);
         }
     }

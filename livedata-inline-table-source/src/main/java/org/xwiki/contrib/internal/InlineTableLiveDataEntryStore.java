@@ -35,6 +35,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.xwiki.cache.CacheException;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
@@ -76,6 +77,9 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
     @Inject
     private ComponentManager componentManager;
 
+    @Inject
+    private InlineTableCache inlineTableCache;
+
     @Override
     public Optional<Map<String, Object>> get(Object entryId) throws LiveDataException
     {
@@ -99,8 +103,8 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode entriesNode = null;
         try {
-            String decodedJson = decompressString(Base64.getUrlDecoder()
-                .decode(((InlineTableLiveDataSource) liveDataSource).getParameters().get("entries").toString()));
+            String decodedJson = decompressString(Base64.getUrlDecoder().decode(
+                getEntriesB64(((InlineTableLiveDataSource) liveDataSource).getParameters().get("entries").toString())));
             entriesNode = objectMapper.readTree(decodedJson);
         } catch (IOException e) {
             throw new LiveDataException("Failed to retrieve entries.", e);
@@ -207,6 +211,28 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
         gzip.close();
 
         return new String(out, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Find the cached entries and get its base64 representation.
+     * 
+     * @param entries the received entries query parameter
+     * @return the entries base64 representation
+     */
+    private String getEntriesB64(String entries) throws LiveDataException
+    {
+        String result;
+        try {
+            result = this.inlineTableCache.getCache().get(entries);
+        } catch (CacheException e) {
+            throw new LiveDataException("Failed to retrieve cache.", e);
+        }
+
+        if (result == null) {
+            return entries;
+        }
+
+        return result;
     }
 
 }

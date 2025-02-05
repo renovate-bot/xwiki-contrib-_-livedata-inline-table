@@ -30,7 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.math.IntRange;
+import org.xwiki.cache.Cache;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.BlockFilter;
 import org.xwiki.rendering.block.GroupBlock;
@@ -66,16 +68,20 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
 
     private LiveDataInlineTableMacroParameters parameters;
 
+    private Cache<String> cache;
+
     /**
      * Constructor.
      */
     LiveDataInlineTableMacroBlockFilter(LiveDataInlineTableMacroParameters parameters,
-        MacroTransformationContext context, BlockRenderer plainTextRenderer, BlockRenderer richTextRenderer)
+        MacroTransformationContext context, BlockRenderer plainTextRenderer, BlockRenderer richTextRenderer,
+        Cache<String> cache)
     {
         this.parameters = parameters;
         this.context = context;
         this.plainTextRenderer = plainTextRenderer;
         this.richTextRenderer = richTextRenderer;
+        this.cache = cache;
     }
 
     @Override
@@ -167,10 +173,8 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
 
         // Convert the entries and fields to JSON in order to pass them to LiveData.
         String entriesJson = "";
-        String fieldsJson = "";
         try {
             entriesJson = buildJSON(entries);
-            fieldsJson = buildJSON(fields);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
             throw new LiveDataInlineTableMacroRuntimeException("Failed to serialize the table.");
@@ -182,6 +186,12 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
             entriesB64 = Base64.getUrlEncoder().encodeToString(compressString(entriesJson));
         } catch (IOException e) {
             throw new LiveDataInlineTableMacroRuntimeException("Failed to compress the table entries.");
+        }
+
+        if (entriesB64.length() > 180) {
+            String hash = DigestUtils.sha256Hex(entriesB64);
+            this.cache.set(hash, entriesB64);
+            entriesB64 = hash;
         }
 
         // Build the LiveData JSON.
