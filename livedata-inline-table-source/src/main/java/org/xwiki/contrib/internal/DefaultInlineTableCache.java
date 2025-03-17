@@ -22,6 +22,7 @@ package org.xwiki.contrib.internal;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
 import org.xwiki.cache.Cache;
 import org.xwiki.cache.CacheException;
 import org.xwiki.cache.CacheManager;
@@ -42,6 +43,9 @@ public class DefaultInlineTableCache implements InlineTableCache
     @Inject
     private CacheManager cacheManager;
 
+    @Inject
+    private Logger logger;
+
     private Cache<String> cache;
 
     @Override
@@ -55,6 +59,7 @@ public class DefaultInlineTableCache implements InlineTableCache
 
     /**
      * Initialize the cache with a new id if it already exists.
+     * 
      * @param id
      * @throws CacheException
      */
@@ -65,8 +70,11 @@ public class DefaultInlineTableCache implements InlineTableCache
             if (id != 0) {
                 cacheId = "." + id;
             }
+            logger.debug("Trying to create a cache with id: " + id);
             this.cache = this.cacheManager.createNewCache(this.buildCacheConfiguration("cache" + cacheId));
+            logger.debug("Successfully created cache.");
         } catch (CacheException e) {
+            logger.debug("Failed to create cache.");
             if (id < 100) {
                 this.initCache(id + 1);
             } else {
@@ -86,7 +94,7 @@ public class DefaultInlineTableCache implements InlineTableCache
         CacheConfiguration cacheConfiguration = new CacheConfiguration();
         cacheConfiguration.setConfigurationId("xwiki.contrib.livedata-inline-table." + id);
         LRUEvictionConfiguration lru = new LRUEvictionConfiguration();
-        lru.setMaxEntries(10000);
+        lru.setMaxEntries(100000000);
         lru.setMaxIdle(3600);
         return cacheConfiguration;
     }

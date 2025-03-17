@@ -22,6 +22,8 @@ package org.xwiki.contrib.internal;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,6 +37,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
 import org.xwiki.cache.CacheException;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
@@ -67,18 +70,16 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
 
     private static final String TEXT_ID = "text.";
 
-    // /**
-    // * The InlineTableLiveDataSource object holding the received entries.
-    // */
-    // @Inject
-    // @Named(InlineTableLiveDataSource.ID)
-    // private LiveDataSource liveDataSource;
+    private static final String DATE_ID = "date.";
 
     @Inject
     private ComponentManager componentManager;
 
     @Inject
     private InlineTableCache inlineTableCache;
+
+    @Inject
+    private Logger logger;
 
     @Override
     public Optional<Map<String, Object>> get(Object entryId) throws LiveDataException
@@ -102,12 +103,21 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
         // Decode the received entries.
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode entriesNode = null;
+        String entriesParameter =
+            ((InlineTableLiveDataSource) liveDataSource).getParameters().get("entries").toString();
+        logger.debug("Received entries parameter: " + entriesParameter);
+        String entriesB64 = getEntriesB64(entriesParameter);
+        logger.debug("Attemtping to decode and decompress the entries.");
         try {
-            String decodedJson = decompressString(Base64.getUrlDecoder().decode(
-                getEntriesB64(((InlineTableLiveDataSource) liveDataSource).getParameters().get("entries").toString())));
+            String decodedJson = decompressString(Base64.getUrlDecoder().decode(entriesB64));
+            logger.debug("Decoded entries json: " + decodedJson);
             entriesNode = objectMapper.readTree(decodedJson);
         } catch (IOException e) {
-            throw new LiveDataException("Failed to retrieve entries.", e);
+            if (entriesParameter.equals(entriesB64)) {
+                throw new LiveDataException(
+                    "Failed to retrieve entries. Received entries parameter is not in cache or is not valid.", e);
+            }
+            throw new LiveDataException("Failed to retrieve entries. The data was found in cache but is not valid.", e);
         }
 
         // Organize the filter so we can access them by field.
@@ -117,10 +127,12 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
         }
 
         // Parse the decoded JSON.
+        logger.debug("Parsing entries JSON.");
         int i = 0;
         for (JsonNode entry : entriesNode) {
             Map<String, Object> ldEntry = new HashMap<>();
 
+            logger.debug("[" + i + "] Parsing entry.");
             // Add our generated ID. Filtering or sorting should not change this.
             ldEntry.put("_inline_id", i);
 
@@ -131,30 +143,122 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
             for (Iterator<String> it = entry.fieldNames(); it.hasNext();) {
                 String field = it.next();
 
-                String value = entry.get(field).asText();
+                String textValue = entry.get(field).asText();
                 // Check the filters for this field.
-                Filter filter = filters.get(StringUtils.substringAfter(field, TEXT_ID));
-                if (filter != null && field.startsWith(TEXT_ID)) {
-                    for (Constraint constraint : filter.getConstraints()) {
-                        switch (constraint.getOperator()) {
-                            case "startsWith":
-                                if (!StringUtils.startsWithIgnoreCase(value, constraint.getValue().toString())) {
-                                    filtered = true;
-                                }
-                                constraint.getValue();
-                                break;
-                            case "equals":
-                                if (!value.equals(constraint.getValue().toString())) {
-                                    filtered = true;
-                                }
-                                break;
-                            // We consider "contains" to be the default operator.
-                            default:
-                                if (!StringUtils.containsIgnoreCase(value, constraint.getValue().toString())) {
-                                    filtered = true;
-                                }
+
+                logger.debug("[" + i + "] Processing field " + field + " of value: " + textValue);
+
+                if (field.contains(DATE_ID)) {
+                    logger.debug(
+                        "[" + i + " - " + field + "] Date marker found, trying to parse value as unix timestamp.");
+                    Filter filter = filters.get(StringUtils.substringAfter(field, DATE_ID));
+                    Long numericValue = null;
+
+                    try {
+                        numericValue = Long.parseLong(textValue);
+                        logger.debug("[" + i + " - " + field + "] Parsed timestamp: " + numericValue);
+                    } catch (NumberFormatException e) {
+                        logger.debug("[" + i + " - " + field + "] Failed to parse timestamp.");
+                    }
+
+                    if (filter != null && numericValue != null && field.startsWith(DATE_ID)) {
+                        logger.debug("[" + i + " - " + field + "] Checking for filtering.");
+                        for (Constraint constraint : filter.getConstraints()) {
+                            switch (constraint.getOperator()) {
+                                // We consider "between" to be the default operator.
+                                case "between":
+                                    logger.debug(
+                                        "[" + i + " - " + field + "] Found a 'between' filter constraint with value: "
+                                            + constraint.getValue().toString());
+                                    logger
+                                        .debug("[" + i + " - " + field + "] Splitting value with '/' as a delimiter.");
+                                    String[] dates = StringUtils.split(constraint.getValue().toString(), "/");
+
+                                    logger.debug("[" + i + " - " + field + "] Found " + dates.length + " parts.");
+                                    if (dates.length == 2) {
+                                        String beginDateString = dates[0];
+                                        String endDateString = dates[1];
+
+                                        logger.debug("[" + i + " - " + field + "] Parsing " + beginDateString + " and "
+                                            + endDateString + " as ISO8601 dates.");
+
+                                        Long beginDate =
+                                            Instant.from(DateTimeFormatter.ISO_INSTANT.parse(beginDateString))
+                                                .getEpochSecond();
+                                        Long endDate = Instant.from(DateTimeFormatter.ISO_INSTANT.parse(endDateString))
+                                            .getEpochSecond();
+
+                                        logger
+                                            .debug("[" + i + " - " + field + "] Parsed date range as unix timestamps: "
+                                                + beginDate + " - " + endDate + ".");
+
+                                        if (beginDate != null && endDate != null) {
+
+                                            logger.debug("[" + i + " - " + field
+                                                + "] Checking if field value is contained in range.");
+                                            if (beginDate > numericValue || numericValue > endDate) {
+                                                logger.debug("[" + i + " - " + field
+                                                    + "] Field value is not contained in range, filtering this entry.");
+                                                filtered = true;
+                                            }
+                                        }
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
                         }
                     }
+                } else if (field.contains(TEXT_ID)) {
+                    logger.debug("[" + i + " - " + field + "] Text marker found, checking for text filters.");
+                    Filter filter = filters.get(StringUtils.substringAfter(field, TEXT_ID));
+                    if (filter != null && field.startsWith(TEXT_ID)) {
+                        for (Constraint constraint : filter.getConstraints()) {
+                            switch (constraint.getOperator()) {
+                                case "startsWith":
+                                    logger.debug("[" + i + " - " + field
+                                        + "] Found a 'startsWith' filter constraint with value: "
+                                        + constraint.getValue().toString());
+                                    if (!StringUtils.startsWithIgnoreCase(textValue,
+                                        constraint.getValue().toString())) {
+                                        logger.debug("[" + i + " - " + field
+                                            + "] Entry's field value does not start with given filter value. Filtering entry.");
+                                        filtered = true;
+                                    }
+                                    break;
+                                case "equals":
+                                    logger.debug(
+                                        "[" + i + " - " + field + "] Found a 'equals' filter constraint with value: "
+                                            + constraint.getValue().toString());
+                                    if (!textValue.equals(constraint.getValue().toString())) {
+                                        logger.debug("[" + i + " - " + field
+                                            + "] Entry's field is not the same as the given filter value. Filtering entry.");
+                                        filtered = true;
+                                    }
+                                    break;
+                                case "contains":
+                                    logger.debug(
+                                        "[" + i + " - " + field + "] Found a 'contains' filter constraint with value: "
+                                            + constraint.getValue().toString());
+                                    if (!StringUtils.containsIgnoreCase(textValue, constraint.getValue().toString())) {
+                                        logger.debug("[" + i + " - " + field
+                                            + "] Entry's field value does contain the given filter value. Filtering entry.");
+                                        filtered = true;
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                }
+
+                Number numericValue = entry.get(field).numberValue();
+
+                Object value = textValue;
+                if (numericValue != null) {
+                    logger.debug("[" + i + " - " + field + "] Numeric value found, returning as a number.");
+                    value = numericValue;
                 }
 
                 // Add the field to the entry.
@@ -170,16 +274,43 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
         }
 
         // Sorting support.
+        logger.debug("Sorting entries.");
         Collections.sort(liveData.getEntries(), (Map<String, Object> arg0, Map<String, Object> arg1) -> {
+            logger.debug("Comparing entries " + arg0.get("_inline_id") + " and " + arg1.get("_inline_id") + ".");
             for (SortEntry sort : query.getSort()) {
-                Object o0 = arg0.get(TEXT_ID + sort.getProperty());
-                Object o1 = arg1.get(TEXT_ID + sort.getProperty());
+                logger.debug("Comparing along field: " + sort.getProperty());
+                int c = 0;
 
-                if (o0 == null || o1 == null) {
-                    continue;
+                if (arg0.containsKey(DATE_ID + sort.getProperty())) {
+                    logger.debug("Field is a date, comparing numeric values of date field.");
+                    Object o0 = arg0.get(DATE_ID + sort.getProperty());
+                    Object o1 = arg1.get(DATE_ID + sort.getProperty());
+
+                    if (o0 == null || o1 == null) {
+                        continue;
+                    }
+
+                    Long t0;
+                    Long t1;
+
+                    try {
+                        t0 = Long.parseLong(o0.toString());
+                        t1 = Long.parseLong(o1.toString());
+                    } catch (NumberFormatException e) {
+                        continue;
+                    }
+
+                    c = t0.compareTo(t1);
+                } else {
+                    logger.debug("Field is not a date, comparing text values.");
+                    Object o0 = arg0.get(TEXT_ID + sort.getProperty());
+                    Object o1 = arg1.get(TEXT_ID + sort.getProperty());
+
+                    if (o0 == null || o1 == null) {
+                        continue;
+                    }
+                    c = o0.toString().compareTo(o1.toString());
                 }
-
-                int c = o0.toString().compareTo(o1.toString());
 
                 if (sort.isDescending()) {
                     c = -c;
@@ -201,16 +332,19 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
      * 
      * @param str the string to compress
      * @return the compressed string as bytes.
-     * @throws IOException
+     * @throws LiveDataException
      */
-    private static String decompressString(byte[] bytes) throws IOException
+    private static String decompressString(byte[] bytes) throws LiveDataException
     {
-        ByteArrayInputStream in = new ByteArrayInputStream(bytes);
-        GZIPInputStream gzip = new GZIPInputStream(in);
-        byte[] out = gzip.readAllBytes();
-        gzip.close();
-
-        return new String(out, StandardCharsets.UTF_8);
+        try {
+            ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+            GZIPInputStream gzip = new GZIPInputStream(in);
+            byte[] out = gzip.readAllBytes();
+            gzip.close();
+            return new String(out, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new LiveDataException("Failed to decompress the entries parameter.", e);
+        }
     }
 
     /**
@@ -222,6 +356,8 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
     private String getEntriesB64(String entries) throws LiveDataException
     {
         String result;
+
+        logger.debug("Trying to retrieve entry from cache.");
         try {
             result = this.inlineTableCache.getCache().get(entries);
         } catch (CacheException e) {
@@ -229,9 +365,12 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
         }
 
         if (result == null) {
+            logger.debug("Entries could not be found in cache. Assuming " + entries
+                + " is not a hash but the entries Base64 itself.");
             return entries;
         }
 
+        logger.debug("Found entries Base64 in cache: " + result);
         return result;
     }
 

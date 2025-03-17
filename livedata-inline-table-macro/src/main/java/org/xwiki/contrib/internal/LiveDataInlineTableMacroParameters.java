@@ -19,6 +19,8 @@
  */
 package org.xwiki.contrib.internal;
 
+import org.xwiki.properties.annotation.PropertyDescription;
+
 /**
  * Inline Table Livedata macro parameters.
  * 
@@ -33,6 +35,14 @@ public class LiveDataInlineTableMacroParameters
 
     private String header;
 
+    private String dateFormats;
+
+    private String dateFormatsSeparator = "\\|\\|";
+    
+    private Boolean sorting = true;
+    
+    private Boolean filtering = true;
+
     /**
      * Gets the id Parameter.
      * 
@@ -46,7 +56,7 @@ public class LiveDataInlineTableMacroParameters
     /**
      * Sets the id parameter.
      * 
-     * @param id the id parameter.
+     * @param id
      */
     public void setId(String id)
     {
@@ -92,4 +102,46 @@ public class LiveDataInlineTableMacroParameters
     {
         this.header = header;
     }
+
+    /**
+     * Gets the dateFormat parameter.
+     * 
+     * @return the dateFormat parameter
+     */
+    public String getDateFormats()
+    {
+        return this.dateFormats;
+    }
+
+    /**
+     * Sets the dateFormat parameter.
+     * 
+     * @param dateFormats the dateFormat parameter
+     */
+    @PropertyDescription("List of date formats using dateFormatsSeparator as a separator regex.")
+    public void setDateFormats(String dateFormats)
+    {
+        this.dateFormats = dateFormats;
+    }
+
+    /**
+     * Gets the dateFormatsSeparator parameter.
+     * 
+     * @return the dateFormatsSeparator parameter.
+     */
+    public String getDateFormatsSeparator()
+    {
+        return this.dateFormatsSeparator;
+    }
+
+    /**
+     * Sets the dateFormatsSeparator parameter.
+     * 
+     * @param dateFormatSeparator
+     */
+    public void setDateFormatsSeparator(String dateFormatSeparator)
+    {
+        this.dateFormatsSeparator = dateFormatSeparator;
+    }
+
 }

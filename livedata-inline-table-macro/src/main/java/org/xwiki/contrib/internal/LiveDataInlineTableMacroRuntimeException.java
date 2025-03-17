@@ -20,7 +20,7 @@
 package org.xwiki.contrib.internal;
 
 /**
- * Represents a runtime exception thrown by the LiveDataInlineTableMacro. 
+ * Represents a runtime exception thrown by the LiveDataInlineTableMacro.
  * 
  * @version $Id$
  */
@@ -31,11 +31,22 @@ public class LiveDataInlineTableMacroRuntimeException extends RuntimeException
 
     /**
      * Constructor.
+     * 
      * @param message
      */
     public LiveDataInlineTableMacroRuntimeException(String message)
     {
         super(message);
     }
-    
+
+    /**
+     * Constructor.
+     * @param message
+     * @param cause
+     */
+    public LiveDataInlineTableMacroRuntimeException(String message, Throwable cause)
+    {
+        super(message, cause);
+    }
+
 }

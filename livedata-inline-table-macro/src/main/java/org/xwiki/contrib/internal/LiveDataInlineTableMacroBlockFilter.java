@@ -22,16 +22,23 @@ package org.xwiki.contrib.internal;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
+import javax.inject.Provider;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.math.IntRange;
+import org.slf4j.Logger;
 import org.xwiki.cache.Cache;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.BlockFilter;
@@ -48,6 +55,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xpn.xwiki.XWikiContext;
 
 /**
  * Convert a Table to LiveData.
@@ -60,6 +68,12 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
 
     private static final String ID = "id";
 
+    private static final String DATE = "date";
+
+    private static final String STRING = "String";
+
+    private static final String DEFAULT_FORMAT = "yyyy/MM/dd HH:mm";
+
     private MacroTransformationContext context;
 
     private BlockRenderer plainTextRenderer;
@@ -70,18 +84,37 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
 
     private Cache<String> cache;
 
+    private Logger logger;
+
+    private String[] dateFormats;
+
+    private Provider<XWikiContext> contextProvider;
+
     /**
      * Constructor.
      */
     LiveDataInlineTableMacroBlockFilter(LiveDataInlineTableMacroParameters parameters,
         MacroTransformationContext context, BlockRenderer plainTextRenderer, BlockRenderer richTextRenderer,
-        Cache<String> cache)
+        Cache<String> cache, Provider<XWikiContext> contextProvider, Logger logger)
     {
         this.parameters = parameters;
         this.context = context;
         this.plainTextRenderer = plainTextRenderer;
         this.richTextRenderer = richTextRenderer;
         this.cache = cache;
+        this.logger = logger;
+        this.contextProvider = contextProvider;
+
+        // When no DateFormats parameter is specified, use the format defined in the administration section.
+        if (parameters.getDateFormats() == null || parameters.getDateFormats().isBlank()) {
+            XWikiContext xcontext = contextProvider.get();
+            this.dateFormats = List.of(xcontext.getWiki().getXWikiPreference("dateformat", DEFAULT_FORMAT, xcontext))
+                .toArray(new String[0]);
+        } else {
+            this.dateFormats = parameters.getDateFormats().split(parameters.getDateFormatsSeparator());
+        }
+
+        logger.debug("Using the following date formats: " + String.join(", ", this.dateFormats));
     }
 
     @Override
@@ -103,6 +136,8 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
     {
         private List<String> fields;
 
+        private List<String> fieldsTypes;
+
         private List<Map<String, Object>> entries;
 
         /**
@@ -111,9 +146,10 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
          * @param fields The fields of the table.
          * @param entries The entries of table.
          */
-        ParsedTable(List<String> fields, List<Map<String, Object>> entries)
+        ParsedTable(List<String> fields, List<String> fieldsTypes, List<Map<String, Object>> entries)
         {
             this.setFields(fields);
+            this.setFieldsTypes(fieldsTypes);
             this.setEntries(entries);
         }
 
@@ -135,6 +171,26 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
         public void setFields(List<String> fields)
         {
             this.fields = fields;
+        }
+
+        /**
+         * Gets the fields types of the table.
+         * 
+         * @return the fields types of the table.
+         */
+        public List<String> getFieldsTypes()
+        {
+            return this.fieldsTypes;
+        }
+
+        /**
+         * Sets the fields types of the table.
+         * 
+         * @param fieldsTypes the fields of the table.
+         */
+        public void setFieldsTypes(List<String> fieldsTypes)
+        {
+            this.fieldsTypes = fieldsTypes;
         }
 
         /**
@@ -169,27 +225,35 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
         // Parse the table.
         ParsedTable parsedTable = tableToMap(table, parameters);
         List<String> fields = parsedTable.getFields();
+        List<String> fieldsTypes = parsedTable.getFieldsTypes();
         List<Map<String, Object>> entries = parsedTable.getEntries();
+
+        logger.debug("Found fields: " + String.join(",", fields.toArray(new String[0])));
+        logger.debug("Fields types: " + String.join(",", fieldsTypes.toArray(new String[0])));
 
         // Convert the entries and fields to JSON in order to pass them to LiveData.
         String entriesJson = "";
         try {
             entriesJson = buildJSON(entries);
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            throw new LiveDataInlineTableMacroRuntimeException("Failed to serialize the table.");
+            throw new LiveDataInlineTableMacroRuntimeException("Failed to serialize the table.", e);
         }
+
+        logger.debug("Built the following entries JSON: " + entriesJson);
 
         // Encode the JSON to URLBase64 because it is passed to LiveData as a query parameter.
         String entriesB64 = "";
         try {
             entriesB64 = Base64.getUrlEncoder().encodeToString(compressString(entriesJson));
         } catch (IOException e) {
-            throw new LiveDataInlineTableMacroRuntimeException("Failed to compress the table entries.");
+            throw new LiveDataInlineTableMacroRuntimeException("Failed to compress the table entries.", e);
         }
+
+        logger.debug("Compressed and encoded the entries JSON as Base64: " + entriesB64);
 
         if (entriesB64.length() > 180) {
             String hash = DigestUtils.sha256Hex(entriesB64);
+            logger.debug("Base64 is longer than 180 characters, storing in cache using its sha256: " + hash);
             this.cache.set(hash, entriesB64);
             entriesB64 = hash;
         }
@@ -200,11 +264,13 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
             ldJson = buildJSON(Map.of("query",
                 Map.of("properties", (new IntRange(0, fields.size() - 1)).toArray(), "source",
                     Map.of(ID, InlineTableLiveDataSource.ID, "entries", entriesB64), "offset", 0, "limit", 10),
-                "meta", Map.of("propertyDescriptors", getPropertyDescriptors(fields), "defaultDisplayer", "html")));
+                "meta", Map.of("propertyDescriptors", getPropertyDescriptors(fields, fieldsTypes), "defaultDisplayer",
+                    "html")));
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            throw new LiveDataInlineTableMacroRuntimeException("Failed to serialize the LiveData parameters.");
+            throw new LiveDataInlineTableMacroRuntimeException("Failed to serialize the LiveData parameters.", e);
         }
+
+        logger.debug("Built the LiveData JSON: " + ldJson);
 
         // Call LiveData with the computed parameters.
         String id = parameters.getId();
@@ -238,13 +304,34 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
      * @param fields the name of the fields
      * @return the list of property descriptor for the given fields
      */
-    private List<Object> getPropertyDescriptors(List<String> fields)
+    private List<Object> getPropertyDescriptors(List<String> fields, List<String> fieldsTypes)
     {
         List<Object> result = new ArrayList<>();
 
         for (int i = 0; i < fields.size(); i++) {
             String field = fields.get(i);
-            result.add(Map.of(ID, "" + i, "name", field, "sortable", true, "filterable", true));
+            Map<String, Object> fieldMap = new HashMap<>();
+
+            logger.debug("Setting property descriptor for field " + i + ": " + field);
+
+            fieldMap.put(ID, "" + i);
+            fieldMap.put("name", field);
+            fieldMap.put("sortable", true);
+            fieldMap.put("filterable", true);
+
+            if (!fieldsTypes.get(i).equals(STRING)) {
+                logger.debug(
+                    "Field " + field + " has a special field type, using associated displayer: " + fieldsTypes.get(i));
+                fieldMap.put("displayer", fieldsTypes.get(i));
+
+                if (fieldsTypes.get(i).equals(DATE)) {
+                    logger.debug(
+                        "Field " + field + " is of type date, using html displayer and custom filter specification.");
+                    fieldMap.put("displayer", "html");
+                    fieldMap.put("filter", Map.of("id", "date", "dateFormat", this.dateFormats[0]));
+                }
+            }
+            result.add(fieldMap);
         }
 
         return result;
@@ -283,12 +370,19 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
                 propertiesCount = Math.max(propertiesCount, row.getChildren().size());
             }
         }
+        logger.debug("Detected " + propertiesCount + " rows.");
 
         // Define the properties, i.e. the header of the table.
+        // Define the initial fieldsTypes list.
         List<String> properties = new ArrayList<>();
+        List<String> fieldsTypes = new ArrayList<>();
         for (int i = 0; i < propertiesCount; i++) {
             properties.add("" + i);
+            fieldsTypes.add(null);
         }
+
+        // Detect the fields types.
+        identifyPropertiesTypes(rows, fieldsTypes, this.dateFormats);
 
         // Extract the entries from the rows.
         List<Map<String, Object>> entries = new ArrayList<>();
@@ -298,28 +392,116 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
             int i = 0;
             for (Block child : row.getChildren()) {
                 if (child instanceof TableCellBlock) {
+                    logger.debug("Parsing a cell of column: " + i);
                     TableCellBlock cell = (TableCellBlock) child;
                     WikiPrinter textPrinter = new DefaultWikiPrinter();
                     plainTextRenderer.render(cell, textPrinter);
                     if (entries.isEmpty() && child instanceof TableHeadCellBlock) {
                         properties.set(i, textPrinter.toString());
                         inlineHeading = true;
+                        logger.debug("Detected inline heading: " + textPrinter.toString());
                     }
                     // We need to render the content of the cell as a string so that we can pass it to LiveData.
                     WikiPrinter cellPrinter = new DefaultWikiPrinter();
                     richTextRenderer.render(new GroupBlock(cell.getChildren(), cell.getParameters()), cellPrinter);
+                    logger.debug("Rendering cell as html: " + cellPrinter.toString());
                     entry.put("" + i, cellPrinter.toString());
+                    logger.debug("Rendering cell as text: " + textPrinter.toString());
                     entry.put("text." + i, textPrinter.toString());
+                    if (fieldsTypes.get(i).equals(DATE)) {
+                        logger.debug("A date is expected, trying to parse.");
+                        String datetimeString = "";
+                        Object timestamp = "";
+                        if (!textPrinter.toString().isBlank()) {
+
+                            for (int j = 0; j < this.dateFormats.length; j++) {
+                                try {
+                                    logger.debug("Trying to parse date using format: " + this.dateFormats[j]);
+
+                                    Locale locale = this.contextProvider.get().getLocale();
+                                    SimpleDateFormat parser = new SimpleDateFormat(this.dateFormats[j], locale);
+                                    parser.setLenient(true);
+
+                                    Date date = parser.parse(textPrinter.toString());
+                                    datetimeString = new SimpleDateFormat(this.dateFormats[j], locale).format(date);
+                                    timestamp = date.toInstant().getEpochSecond();
+                                    logger.debug("Parsed date: " + datetimeString);
+                                    logger.debug("Parsed unix timestamp: " + timestamp);
+                                    entry.put("date." + i, timestamp);
+                                    break;
+                                } catch (ParseException e) {
+                                    logger.debug("Failed to parse '" + textPrinter.toString() + "' using format "
+                                        + this.dateFormats[j], e);
+                                }
+                            }
+                        }
+                    }
                     i++;
                 }
             }
             entries.add(entry);
         }
-        if (inlineHeading) {
+        if (inlineHeading)
+
+        {
+            logger.debug("Removing the first detected row because it's a heading.");
             entries.remove(0);
         }
 
-        return new ParsedTable(properties, entries);
+        return new ParsedTable(properties, fieldsTypes, entries);
+    }
+
+    private void identifyPropertiesTypes(List<TableRowBlock> rows, List<String> fieldsTypes, String[] formats)
+    {
+
+        logger.debug("Detecting the types of columns.");
+        for (TableRowBlock row : rows) {
+            int i = 0;
+            for (Block child : row.getChildren()) {
+                if (child instanceof TableCellBlock && !(child instanceof TableHeadCellBlock)) {
+                    TableCellBlock cell = (TableCellBlock) child;
+                    WikiPrinter textPrinter = new DefaultWikiPrinter();
+                    plainTextRenderer.render(cell, textPrinter);
+
+                    // When the plainText render is blank, do nothing.
+                    if (textPrinter.toString().isBlank()) {
+                        logger.debug("Plain text render of cell is empty, skipping.");
+                        i++;
+                        continue;
+                    }
+
+                    // When the fieldsTypes value for that column is null or "Date", parse as a date and update
+                    // fieldsTypes.
+                    if (fieldsTypes.get(i) == null || fieldsTypes.get(i).equals(DATE)) {
+                        for (int j = 0; j < this.dateFormats.length; j++) {
+                            try {
+                                logger.debug("Trying to parse '" + textPrinter.toString() + "' using date format "
+                                    + this.dateFormats[j]);
+                                SimpleDateFormat parser =
+                                    new SimpleDateFormat(this.dateFormats[j], this.contextProvider.get().getLocale());
+                                parser.setLenient(true);
+                                parser.parse(textPrinter.toString());
+                                logger.debug("Successfully parsed date, marking column " + i + " as date.");
+                                fieldsTypes.set(i, DATE);
+                                break;
+                            } catch (ParseException e) {
+                                logger.debug("Failed to parse a date, marking column " + i + " as string.", e);
+                                fieldsTypes.set(i, STRING);
+                            }
+                        }
+                    }
+                    i++;
+                }
+            }
+        }
+
+        logger.debug("Column type identification done.");
+        for (int i = 0; i < fieldsTypes.size(); i++) {
+            if (fieldsTypes.get(i) == null) {
+                fieldsTypes.set(i, STRING);
+            }
+            logger.debug("fieldsType[" + i + "]: " + fieldsTypes.get(i));
+        }
     }
 
 }

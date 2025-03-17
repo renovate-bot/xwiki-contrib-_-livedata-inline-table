@@ -27,4 +27,9 @@
 <suppressions>
   <suppress checks="ClassFanOutComplexity" files="LiveDataInlineTableMacro.java"/>
   <suppress checks="ClassFanOutComplexity" files="LiveDataInlineTableMacroBlockFilter.java"/>
+  <suppress checks="CyclomaticComplexity" files="LiveDataInlineTableMacroBlockFilter.java"/>
+  <suppress checks="ExecutableStatementCount" files="LiveDataInlineTableMacroBlockFilter.java"/>
+  <suppress checks="MultipleStringLiterals" files="LiveDataInlineTableMacroBlockFilter.java"/>
+  <suppress checks="JavaNCSS" files="LiveDataInlineTableMacroBlockFilter.java"/>
+  <suppress checks="NPathComplexity" files="LiveDataInlineTableMacroBlockFilter.java"/>
 </suppressions>
