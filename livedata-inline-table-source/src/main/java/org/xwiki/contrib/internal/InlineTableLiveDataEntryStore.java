@@ -279,16 +279,40 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
             logger.debug("Comparing entries " + arg0.get("_inline_id") + " and " + arg1.get("_inline_id") + ".");
             for (SortEntry sort : query.getSort()) {
                 logger.debug("Comparing along field: " + sort.getProperty());
+
+                if (!(arg0.containsKey(sort.getProperty()) && arg1.containsKey(sort.getProperty()))) {
+
+                    int c = 0;
+                    if (!arg0.containsKey(sort.getProperty()) && !arg1.containsKey(sort.getProperty())) {
+                        logger.debug("Field absent on both objects, skipping.");
+                        continue;
+                    }
+
+                    if (arg0.containsKey(sort.getProperty())) {
+                        logger.debug("Field is present on first object but absent on second.");
+                        c = 1;
+                        logger.debug("Comparison result: " + c);
+                    }
+
+                    if (arg1.containsKey(sort.getProperty())) {
+                        logger.debug("Field is present on second object but absent on first.");
+                        c = -1;
+                        logger.debug("Comparison result: " + c);
+                    }
+
+                    if (sort.isDescending()) {
+                        c = -c;
+                    }
+
+                    return c;
+                }
+
                 int c = 0;
 
-                if (arg0.containsKey(DATE_ID + sort.getProperty())) {
+                if (arg0.containsKey(DATE_ID + sort.getProperty()) && arg1.containsKey(DATE_ID + sort.getProperty())) {
                     logger.debug("Field is a date, comparing numeric values of date field.");
                     Object o0 = arg0.get(DATE_ID + sort.getProperty());
                     Object o1 = arg1.get(DATE_ID + sort.getProperty());
-
-                    if (o0 == null || o1 == null) {
-                        continue;
-                    }
 
                     Long t0;
                     Long t1;
@@ -306,9 +330,6 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
                     Object o0 = arg0.get(TEXT_ID + sort.getProperty());
                     Object o1 = arg1.get(TEXT_ID + sort.getProperty());
 
-                    if (o0 == null || o1 == null) {
-                        continue;
-                    }
                     c = o0.toString().compareTo(o1.toString());
                 }
 
@@ -317,9 +338,13 @@ public class InlineTableLiveDataEntryStore implements LiveDataEntryStore
                 }
 
                 if (c != 0) {
+                    logger.debug("Comparison result: " + c);
                     return c;
                 }
+
+                logger.debug("Objects are equivalent along this field.");
             }
+            logger.debug("Failed to compare objects. Comparison result: 0");
             return 0;
         });
 
