@@ -101,7 +101,7 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
     @Override
     public boolean supportsInlineMode()
     {
-        return true;
+        return false;
     }
 
     @Override
