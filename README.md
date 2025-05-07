@@ -3,7 +3,7 @@
 Display a simple XWiki Syntax table with LiveData.
 
 * Project Lead: [(Dorian OUAKLI)](https://www.xwiki.org/xwiki/bin/view/XWiki/douakli)
-* Documentation & Downloads: [Documentation & Download](https://extensions.xwiki.org/xwiki/bin/view/Extension/)
+* Documentation & Downloads: [Documentation & Download](https://extensions.xwiki.org/xwiki/bin/view/Extension/Inline%20Table%20for%20LiveData/)
 * [Issue Tracker](https://jira.xwiki.org/browse/XLIT)
 * Communication: [Forum](https://forum.xwiki.org/), [Chat](https://dev.xwiki.org/xwiki/bin/view/Community/Chat)
 * [Development Practices](https://dev.xwiki.org)
