@@ -52,6 +52,8 @@ import org.xwiki.rendering.renderer.BlockRenderer;
 import org.xwiki.rendering.renderer.printer.DefaultWikiPrinter;
 import org.xwiki.rendering.renderer.printer.WikiPrinter;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.rendering.transformation.TransformationException;
+import org.xwiki.rendering.transformation.TransformationManager;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -90,12 +92,15 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
 
     private Provider<XWikiContext> contextProvider;
 
+    private TransformationManager transformationManager;
+
     /**
      * Constructor.
      */
     LiveDataInlineTableMacroBlockFilter(LiveDataInlineTableMacroParameters parameters,
         MacroTransformationContext context, BlockRenderer plainTextRenderer, BlockRenderer richTextRenderer,
-        Cache<String> cache, Provider<XWikiContext> contextProvider, Logger logger)
+        Cache<String> cache, Provider<XWikiContext> contextProvider, TransformationManager transformationManager,
+        Logger logger)
     {
         this.parameters = parameters;
         this.context = context;
@@ -104,6 +109,7 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
         this.cache = cache;
         this.logger = logger;
         this.contextProvider = contextProvider;
+        this.transformationManager = transformationManager;
 
         // When no DateFormats parameter is specified, use the format defined in the administration section.
         if (parameters.getDateFormats() == null || parameters.getDateFormats().isBlank()) {
@@ -117,10 +123,29 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
         logger.debug("Using the following date formats: " + String.join(", ", this.dateFormats));
     }
 
+    /**
+     * Checks if there is a table in the ancestors of a given block.
+     * 
+     * @param block the block to check for a table ancestor
+     * @return true when one of the parents of block is a table, false otherwise
+     */
+    private boolean hasTableParent(Block block)
+    {
+        if (block.getParent() == null) {
+            return false;
+        }
+
+        if (block.getParent() instanceof TableBlock) {
+            return true;
+        }
+
+        return hasTableParent(block.getParent());
+    }
+
     @Override
     public List<Block> filter(Block block)
     {
-        if (block instanceof TableBlock) {
+        if (block instanceof TableBlock && !hasTableParent(block)) {
             return transformTable((TableBlock) block);
         }
 
@@ -274,8 +299,11 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
 
         // Call LiveData with the computed parameters.
         String id = parameters.getId();
-        return Collections.singletonList(new MacroBlock("liveData",
-            id == null ? Collections.emptyMap() : Map.of(ID, parameters.getId()), ldJson, context.isInline()));
+        Block liveDataBlock = new MacroBlock("liveData",
+            id == null ? Collections.emptyMap() : Map.of(ID, parameters.getId()), ldJson, context.isInline());
+
+        // TODO: Wrap the LiveData call in a div.
+        return Collections.singletonList(liveDataBlock);
     }
 
     /**
@@ -395,18 +423,35 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
                     logger.debug("Parsing a cell of column: " + i);
                     TableCellBlock cell = (TableCellBlock) child;
                     WikiPrinter textPrinter = new DefaultWikiPrinter();
+
+                    logger.debug("Rendering cell as text.");
                     plainTextRenderer.render(cell, textPrinter);
+
+                    logger.debug("Rendered cell as text: " + textPrinter.toString());
                     if (entries.isEmpty() && child instanceof TableHeadCellBlock) {
                         properties.set(i, textPrinter.toString());
                         inlineHeading = true;
                         logger.debug("Detected inline heading: " + textPrinter.toString());
                     }
+
                     // We need to render the content of the cell as a string so that we can pass it to LiveData.
                     WikiPrinter cellPrinter = new DefaultWikiPrinter();
-                    richTextRenderer.render(new GroupBlock(cell.getChildren(), cell.getParameters()), cellPrinter);
-                    logger.debug("Rendering cell as html: " + cellPrinter.toString());
+
+                    // We need to run transformations in case there is an other livedata-inline-table call inside the
+                    // cell.
+                    Block cellGroup = new GroupBlock(cell.getChildren(), cell.getParameters());
+                    logger.debug("Running cell transformations.");
+                    try {
+                        transformationManager.performTransformations(cellGroup,
+                            this.context.getTransformationContext());
+                    } catch (TransformationException e) {
+                        throw new LiveDataInlineTableMacroRuntimeException("Failed to transform cell content.", e);
+                    }
+
+                    logger.debug("Rendering cell as html.");
+                    richTextRenderer.render(cellGroup, cellPrinter);
+                    logger.debug("Rendered cell as html: " + cellPrinter.toString());
                     entry.put("" + i, cellPrinter.toString());
-                    logger.debug("Rendering cell as text: " + textPrinter.toString());
                     entry.put("text." + i, textPrinter.toString());
                     if (fieldsTypes.get(i).equals(DATE)) {
                         logger.debug("A date is expected, trying to parse.");
