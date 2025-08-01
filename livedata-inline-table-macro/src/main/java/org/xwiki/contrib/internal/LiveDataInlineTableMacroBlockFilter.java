@@ -37,7 +37,7 @@ import java.util.zip.GZIPOutputStream;
 import javax.inject.Provider;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang.math.IntRange;
+import org.apache.commons.lang3.IntegerRange;
 import org.slf4j.Logger;
 import org.xwiki.cache.Cache;
 import org.xwiki.rendering.block.Block;
@@ -287,7 +287,7 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
         String ldJson = "";
         try {
             ldJson = buildJSON(Map.of("query",
-                Map.of("properties", (new IntRange(0, fields.size() - 1)).toArray(), "source",
+                Map.of("properties", toArray(IntegerRange.of(0, fields.size() - 1)), "source",
                     Map.of(ID, InlineTableLiveDataSource.ID, "entries", entriesB64), "offset", 0, "limit", 10),
                 "meta", Map.of("propertyDescriptors", getPropertyDescriptors(fields, fieldsTypes), "defaultDisplayer",
                     "html")));
@@ -304,6 +304,16 @@ public class LiveDataInlineTableMacroBlockFilter implements BlockFilter
 
         // TODO: Wrap the LiveData call in a div.
         return Collections.singletonList(liveDataBlock);
+    }
+
+    private int[] toArray(IntegerRange range)
+    {
+        int[] array = new int[range.getMaximum() - range.getMinimum() + 1];
+        for (int i = 0; i < array.length; i++) {
+            array[i] = range.getMinimum() + i;
+        }
+
+        return array;
     }
 
     /**
