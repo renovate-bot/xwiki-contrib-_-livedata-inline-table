@@ -1,6 +1,6 @@
 # Inline Table LiveData
 
-Display a simple XWiki Syntax table with LiveData.
+Make a simple XWiki Syntax table filterable and sortable with the Live Data macro.
 
 * Project Lead: [(Dorian OUAKLI)](https://www.xwiki.org/xwiki/bin/view/XWiki/douakli)
 * Documentation & Downloads: [Documentation & Download](https://extensions.xwiki.org/xwiki/bin/view/Extension/Inline%20Table%20for%20LiveData/)
