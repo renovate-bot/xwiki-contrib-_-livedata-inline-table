@@ -39,7 +39,6 @@ import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroContentParser;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.macro.descriptor.DefaultContentDescriptor;
-import org.xwiki.rendering.parser.Parser;
 import org.xwiki.rendering.renderer.BlockRenderer;
 import org.xwiki.rendering.syntax.Syntax;
 import org.xwiki.rendering.syntax.SyntaxType;
@@ -86,17 +85,10 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
     private Provider<XWikiContext> xcontextProvider;
 
     @Inject
-    @Named("plain/1.0")
-    private Parser plainTextParser;
-
-    @Inject
     private ComponentManager componentManager;
 
     @Inject
     private InlineTableCache inlineTableCache;
-
-    @Inject
-    private Provider<XWikiContext> contextProvider;
 
     @Inject
     private Logger logger;
@@ -149,7 +141,7 @@ public class LiveDataInlineTableMacro extends AbstractMacro<LiveDataInlineTableM
             return Collections.singletonList(new GroupBlock(parseReadOnlyContent(content, context))
                 .clone(new LiveDataInlineTableMacroBlockFilter(parameters, context, plainTextRenderer,
                     componentManager.getInstance(BlockRenderer.class, renderSyntax), inlineTableCache.getCache(),
-                    contextProvider, transformationManager, logger)));
+                    xcontextProvider, transformationManager, logger)));
         } catch (ComponentLookupException | LiveDataInlineTableMacroRuntimeException | CacheException e) {
             throw new MacroExecutionException(e.getMessage(), e);
         }
