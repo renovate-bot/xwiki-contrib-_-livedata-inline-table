@@ -1,0 +1,1 @@
+org.xwiki.contrib.livedatainline.internal.fakemacros.MacroTest7

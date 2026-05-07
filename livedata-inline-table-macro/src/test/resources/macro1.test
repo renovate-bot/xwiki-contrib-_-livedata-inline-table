@@ -1,0 +1,28 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Simple test without cache, the table is enough small to be not cached.
+.#-----------------------------------------------------
+{{livedata-inline-table}}
+|=A
+|C
+{{/livedata-inline-table}}
+.#-----------------------------------------------------
+.expect|event/1.0
+.#-----------------------------------------------------
+beginDocument
+beginMacroMarkerStandalone [livedata-inline-table] [] [|=A
+|C]
+beginGroup
+beginGroup [[class]=[livedata-inline-table_macro]]
+beginMacroMarkerStandalone [liveData] [] [{${{{regex:.*}}}}]
+onRawText [[ {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [C]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "C"
+} ]] [plain/1.0]
+endMacroMarkerStandalone [liveData] [] [{${{{regex:.*}}}}}]
+endGroup [[class]=[livedata-inline-table_macro]]
+endGroup
+endMacroMarkerStandalone [livedata-inline-table] [] [|=A
+|C]
+endDocument

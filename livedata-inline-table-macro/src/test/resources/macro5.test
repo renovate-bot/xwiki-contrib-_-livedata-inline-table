@@ -1,0 +1,50 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Test with sub-table
+.#-----------------------------------------------------
+{{livedata-inline-table}}
+|=A|=B
+|C|(((
+|=AA|=AB
+|AC|AD
+|AE|AF
+)))
+|E|F
+{{/livedata-inline-table}}
+.#-----------------------------------------------------
+.expect|event/1.0
+.#-----------------------------------------------------
+beginDocument
+beginMacroMarkerStandalone [livedata-inline-table] [] [|=A|=B
+|C|(((
+|=AA|=AB
+|AC|AD
+|AE|AF
+)))
+|E|F]
+beginGroup
+beginGroup [[class]=[livedata-inline-table_macro]]
+beginMacroMarkerStandalone [liveData] [] [${{{regex:.*}}}]
+onRawText [[ {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [C]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginGroup\nbeginTable\nbeginTableRow\nbeginTableHeadCell\nonWord [AA]\nendTableHeadCell\nbeginTableHeadCell\nonWord [AB]\nendTableHeadCell\nendTableRow\nbeginTableRow\nbeginTableCell\nonWord [AC]\nendTableCell\nbeginTableCell\nonWord [AD]\nendTableCell\nendTableRow\nbeginTableRow\nbeginTableCell\nonWord [AE]\nendTableCell\nbeginTableCell\nonWord [AF]\nendTableCell\nendTableRow\nendTable\nendGroup\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "C",
+  "text.1" : "\tAA\tAB\nAC\tAD\nAE\tAF"
+}, {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [E]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [F]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "E",
+  "text.1" : "F"
+} ]] [plain/1.0]
+endMacroMarkerStandalone [liveData] [] [${{{regex:.*}}}]
+endGroup [[class]=[livedata-inline-table_macro]]
+endGroup
+endMacroMarkerStandalone [livedata-inline-table] [] [|=A|=B
+|C|(((
+|=AA|=AB
+|AC|AD
+|AE|AF
+)))
+|E|F]
+endDocument

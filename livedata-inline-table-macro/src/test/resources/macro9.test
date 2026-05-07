@@ -1,0 +1,98 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Test with wiki syntax into the macro content
+.#-----------------------------------------------------
+{{livedata-inline-table}}
+|=A|=B
+|C|**D**
+|//E//|[[F>>ref]]
+|(((
+* item 1
+** item 2
+)))|(((
+1. item 1
+11. item 2
+111. item 3
+)))
+|(((
+; term
+: definition
+)))|//Hello//
+|{{info}}Hello{{/info}}|{{warning}}
+Warning not inline
+{{/warning}}
+{{/livedata-inline-table}}
+.#-----------------------------------------------------
+.expect|event/1.0
+.#-----------------------------------------------------
+beginDocument
+beginMacroMarkerStandalone [livedata-inline-table] [] [|=A|=B
+|C|**D**
+|//E//|[[F>>ref]]
+|(((
+* item 1
+** item 2
+)))|(((
+1. item 1
+11. item 2
+111. item 3
+)))
+|(((
+; term
+: definition
+)))|//Hello//
+|{{info}}Hello{{/info}}|{{warning}}
+Warning not inline
+{{/warning}}]
+beginGroup
+beginGroup [[class]=[livedata-inline-table_macro]]
+beginMacroMarkerStandalone [liveData] [] [{${{{regex:.*}}}}]
+onRawText [[ {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [C]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginFormat [BOLD]\nonWord [D]\nendFormat [BOLD]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "C",
+  "text.1" : "D"
+}, {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginFormat [ITALIC]\nonWord [E]\nendFormat [ITALIC]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginLink [Typed = [false] Type = [url] Reference = [ref]] [false]\nonWord [F]\nendLink [Typed = [false] Type = [url] Reference = [ref]] [false]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "E",
+  "text.1" : "F"
+}, {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginGroup\nbeginList [BULLETED]\nbeginListItem\nonWord [item]\nonSpace\nonWord [1]\nbeginList [BULLETED]\nbeginListItem\nonWord [item]\nonSpace\nonWord [2]\nendListItem\nendList [BULLETED]\nendListItem\nendList [BULLETED]\nendGroup\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginGroup\nbeginList [NUMBERED]\nbeginListItem\nonWord [item]\nonSpace\nonWord [1]\nbeginList [NUMBERED]\nbeginListItem\nonWord [item]\nonSpace\nonWord [2]\nbeginList [NUMBERED]\nbeginListItem\nonWord [item]\nonSpace\nonWord [3]\nendListItem\nendList [NUMBERED]\nendListItem\nendList [NUMBERED]\nendListItem\nendList [NUMBERED]\nendGroup\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "item 1\nitem 2",
+  "text.1" : "item 1\nitem 2\nitem 3"
+}, {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginGroup\nbeginDefinitionList\nbeginDefinitionTerm\nonWord [term]\nendDefinitionTerm\nbeginDefinitionDescription\nonWord [definition]\nendDefinitionDescription\nendDefinitionList\nendGroup\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginFormat [ITALIC]\nonWord [Hello]\nendFormat [ITALIC]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "term\ndefinition",
+  "text.1" : "Hello"
+}, {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginMacroMarkerInline [info] [] [Hello]\nbeginFormat [NONE] [[class]=[box infomessage]]\nbeginMetaData [[non-generated-content]=[java.util.List<org.xwiki.rendering.block.Block>]]\nonWord [Hello]\nendMetaData [[non-generated-content]=[java.util.List<org.xwiki.rendering.block.Block>]]\nendFormat [NONE] [[class]=[box infomessage]]\nendMacroMarkerInline [info] [] [Hello]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginMacroMarkerInline [warning] [] [Warning not inline]\nbeginFormat [NONE] [[class]=[box warningmessage]]\nbeginMetaData [[non-generated-content]=[java.util.List<org.xwiki.rendering.block.Block>]]\nonWord [Warning]\nonSpace\nonWord [not]\nonSpace\nonWord [inline]\nendMetaData [[non-generated-content]=[java.util.List<org.xwiki.rendering.block.Block>]]\nendFormat [NONE] [[class]=[box warningmessage]]\nendMacroMarkerInline [warning] [] [Warning not inline]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "Hello",
+  "text.1" : "Warning not inline"
+} ]] [plain/1.0]
+endMacroMarkerStandalone [liveData] [] [{${{{regex:.*}}}}]
+endGroup [[class]=[livedata-inline-table_macro]]
+endGroup
+endMacroMarkerStandalone [livedata-inline-table] [] [|=A|=B
+|C|**D**
+|//E//|[[F>>ref]]
+|(((
+* item 1
+** item 2
+)))|(((
+1. item 1
+11. item 2
+111. item 3
+)))
+|(((
+; term
+: definition
+)))|//Hello//
+|{{info}}Hello{{/info}}|{{warning}}
+Warning not inline
+{{/warning}}]
+endDocument

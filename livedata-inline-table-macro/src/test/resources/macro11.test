@@ -1,0 +1,27 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Test with empty table
+.#-----------------------------------------------------
+{{livedata-inline-table}}
+||
+{{/livedata-inline-table}}
+.#-----------------------------------------------------
+.expect|event/1.0
+.#-----------------------------------------------------
+beginDocument
+beginMacroMarkerStandalone [livedata-inline-table] [] [||]
+beginGroup
+beginGroup [[class]=[livedata-inline-table_macro]]
+beginMacroMarkerStandalone [liveData] [] [{${{{regex:.*}}}}]
+onRawText [[ {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "",
+  "text.1" : ""
+} ]] [plain/1.0]
+endMacroMarkerStandalone [liveData] [] [{${{{regex:.*}}}}]
+endGroup [[class]=[livedata-inline-table_macro]]
+endGroup
+endMacroMarkerStandalone [livedata-inline-table] [] [||]
+endDocument

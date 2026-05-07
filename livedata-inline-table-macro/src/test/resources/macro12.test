@@ -1,0 +1,22 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Test with empty table
+.#-----------------------------------------------------
+{{livedata-inline-table}}
+|=A|=B|=C
+{{/livedata-inline-table}}
+.#-----------------------------------------------------
+.expect|event/1.0
+.#-----------------------------------------------------
+beginDocument
+beginMacroMarkerStandalone [livedata-inline-table] [] [|=A|=B|=C]
+beginGroup
+beginGroup [[class]=[livedata-inline-table_macro]]
+beginMacroMarkerStandalone [liveData] [] [{${{{regex:.*}}}}]
+onRawText [[ ]] [plain/1.0]
+endMacroMarkerStandalone [liveData] [] [{${{{regex:.*}}}}]
+endGroup [[class]=[livedata-inline-table_macro]]
+endGroup
+endMacroMarkerStandalone [livedata-inline-table] [] [|=A|=B|=C]
+endDocument

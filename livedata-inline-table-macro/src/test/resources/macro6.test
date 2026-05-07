@@ -1,0 +1,66 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Test with sub-table
+.#-----------------------------------------------------
+{{livedata-inline-table}}
+|=A|=B|=C
+|(% style="background-color:green; color:white; width:30%" %)This is a text that is a bit longer|(% style="width:30%" %)This is a text that is a bit longer|(% style="width:40%" %)This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer
+|(% style="background-color:green; color:white; width:30%" %) |(% style="width:30%" %)(((
+Nested table here:
+
+|=Nested Header A|=Nested Header B
+|Nested cell A1|(% style="background-color:green; color:white; width:30%" %)Nested cell B1
+|Nested cell A2|Nested cell B2
+
+
+)))|(% style="width:40%" %)
+{{/livedata-inline-table}}
+.#-----------------------------------------------------
+.expect|event/1.0
+.#-----------------------------------------------------
+beginDocument
+beginMacroMarkerStandalone [livedata-inline-table] [] [|=A|=B|=C
+|(% style="background-color:green; color:white; width:30%" %)This is a text that is a bit longer|(% style="width:30%" %)This is a text that is a bit longer|(% style="width:40%" %)This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer
+|(% style="background-color:green; color:white; width:30%" %) |(% style="width:30%" %)(((
+Nested table here:
+
+|=Nested Header A|=Nested Header B
+|Nested cell A1|(% style="background-color:green; color:white; width:30%" %)Nested cell B1
+|Nested cell A2|Nested cell B2
+
+
+)))|(% style="width:40%" %)]
+beginGroup
+beginGroup [[class]=[livedata-inline-table_macro]]
+beginMacroMarkerStandalone [liveData] [] [${{{regex:.*}}}]
+onRawText [[ {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[background-color:green; color:white; width:30%]]\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[background-color:green; color:white; width:30%]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[width:30%]]\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[width:30%]]\n",
+  "2" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[width:40%]]\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nonSpace\nonWord [This]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [text]\nonSpace\nonWord [that]\nonSpace\nonWord [is]\nonSpace\nonWord [a]\nonSpace\nonWord [bit]\nonSpace\nonWord [longer]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[width:40%]]\n",
+  "text.0" : "This is a text that is a bit longer",
+  "text.2" : "This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer",
+  "text.1" : "This is a text that is a bit longer"
+}, {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[background-color:green; color:white; width:30%]]\nonSpace\nendGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[background-color:green; color:white; width:30%]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[width:30%]]\nbeginGroup\nbeginParagraph\nonWord [Nested]\nonSpace\nonWord [table]\nonSpace\nonWord [here]\nonSpecialSymbol [:]\nendParagraph\nbeginTable\nbeginTableRow\nbeginTableHeadCell\nonWord [Nested]\nonSpace\nonWord [Header]\nonSpace\nonWord [A]\nendTableHeadCell\nbeginTableHeadCell\nonWord [Nested]\nonSpace\nonWord [Header]\nonSpace\nonWord [B]\nendTableHeadCell\nendTableRow\nbeginTableRow\nbeginTableCell\nonWord [Nested]\nonSpace\nonWord [cell]\nonSpace\nonWord [A1]\nendTableCell\nbeginTableCell [[style]=[background-color:green; color:white; width:30%]]\nonWord [Nested]\nonSpace\nonWord [cell]\nonSpace\nonWord [B1]\nendTableCell [[style]=[background-color:green; color:white; width:30%]]\nendTableRow\nbeginTableRow\nbeginTableCell\nonWord [Nested]\nonSpace\nonWord [cell]\nonSpace\nonWord [A2]\nendTableCell\nbeginTableCell\nonWord [Nested]\nonSpace\nonWord [cell]\nonSpace\nonWord [B2]\nendTableCell\nendTableRow\nendTable\nendGroup\nendGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[width:30%]]\n",
+  "2" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[width:40%]]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ][style]=[width:40%]]\n",
+  "text.0" : " ",
+  "text.2" : "",
+  "text.1" : "Nested table here:\n\n\tNested Header A\tNested Header B\nNested cell A1\tNested cell B1\nNested cell A2\tNested cell B2"
+} ]] [plain/1.0]
+endMacroMarkerStandalone [liveData] [] [${{{regex:.*}}}]
+endGroup [[class]=[livedata-inline-table_macro]]
+endGroup
+endMacroMarkerStandalone [livedata-inline-table] [] [|=A|=B|=C
+|(% style="background-color:green; color:white; width:30%" %)This is a text that is a bit longer|(% style="width:30%" %)This is a text that is a bit longer|(% style="width:40%" %)This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer This is a text that is a bit longer
+|(% style="background-color:green; color:white; width:30%" %) |(% style="width:30%" %)(((
+Nested table here:
+
+|=Nested Header A|=Nested Header B
+|Nested cell A1|(% style="background-color:green; color:white; width:30%" %)Nested cell B1
+|Nested cell A2|Nested cell B2
+
+
+)))|(% style="width:40%" %)]
+endDocument

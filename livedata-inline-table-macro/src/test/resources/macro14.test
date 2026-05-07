@@ -1,0 +1,28 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Test with empty table
+.#-----------------------------------------------------
+{{livedata-inline-table}}
+|=A
+|B
+{{/livedata-inline-table}}
+.#-----------------------------------------------------
+.expect|event/1.0
+.#-----------------------------------------------------
+beginDocument
+beginMacroMarkerStandalone [livedata-inline-table] [] [|=A
+|B]
+beginGroup
+beginGroup [[class]=[livedata-inline-table_macro]]
+beginMacroMarkerStandalone [liveData] [] [{${{{regex:.*}}}}]
+onRawText [[ {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [B]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "B"
+} ]] [plain/1.0]
+endMacroMarkerStandalone [liveData] [] [{${{{regex:.*}}}}]
+endGroup [[class]=[livedata-inline-table_macro]]
+endGroup
+endMacroMarkerStandalone [livedata-inline-table] [] [|=A
+|B]
+endDocument

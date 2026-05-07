@@ -24,7 +24,7 @@
   <parent>
     <groupId>org.xwiki.contrib</groupId>
     <artifactId>parent-platform</artifactId>
-    <version>15.10-2</version>
+    <version>15.10-6</version>
   </parent>
   <artifactId>livedata-inline-table</artifactId>
   <packaging>pom</packaging>
@@ -34,8 +34,6 @@
     <xwiki.release.jira.skip>false</xwiki.release.jira.skip>
     <!-- If the project is hosted on http://jira.xwiki.org, only the id needs to be provided. -->
     <xwiki.issueManagement.jira.id>XLIT</xwiki.issueManagement.jira.id>
-    <commons.version>15.10.11</commons.version>
-    <platform.version>15.10.11</platform.version>
   </properties>
   <developers>
     <developer>

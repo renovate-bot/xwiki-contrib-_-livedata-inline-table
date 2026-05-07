@@ -1,0 +1,17 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Test with empty table
+.#-----------------------------------------------------
+{{livedata-inline-table}}
+
+{{/livedata-inline-table}}
+.#-----------------------------------------------------
+.expect|event/1.0
+.#-----------------------------------------------------
+beginDocument
+beginMacroMarkerStandalone [livedata-inline-table] [] []
+beginGroup
+endGroup
+endMacroMarkerStandalone [livedata-inline-table] [] []
+endDocument

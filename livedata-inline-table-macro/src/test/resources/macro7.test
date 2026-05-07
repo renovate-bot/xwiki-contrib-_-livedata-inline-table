@@ -1,0 +1,49 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Test sub-macro call returning complex XDOM
+.#-----------------------------------------------------
+{{livedata-inline-table}}
+{{macro1/}}
+{{/livedata-inline-table}}
+.#-----------------------------------------------------
+.expect|event/1.0
+.#-----------------------------------------------------
+beginDocument
+beginMacroMarkerStandalone [livedata-inline-table] [] [{{macro1/}}]
+beginGroup
+beginMacroMarkerStandalone [macro1] []
+beginGroup [[class]=[livedata-inline-table_macro]]
+beginMacroMarkerStandalone [liveData] [] [${{{regex:.*}}}]
+onRawText [[ {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [A]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [B]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "A",
+  "text.1" : "B"
+}, {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [C]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [D]\nbeginMetaData\nonWord [E]\nendMetaData\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "C",
+  "text.1" : "DE"
+}, {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [F]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nbeginMetaData\nonWord [G]\nendMetaData\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "F",
+  "text.1" : "G"
+}, {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [H]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [I]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "H",
+  "text.1" : "I"
+}, {
+  "0" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [J]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "1" : "beginGroup [[class]=[xwiki-livedata-inline-table-cell ]]\nonWord [K]\nendGroup [[class]=[xwiki-livedata-inline-table-cell ]]\n",
+  "text.0" : "J",
+  "text.1" : "K"
+} ]] [plain/1.0]
+endMacroMarkerStandalone [liveData] [] [${{{regex:.*}}}]
+endGroup [[class]=[livedata-inline-table_macro]]
+endMacroMarkerStandalone [macro1] []
+endGroup
+endMacroMarkerStandalone [livedata-inline-table] [] [{{macro1/}}]
+endDocument
