@@ -24,7 +24,7 @@
   <parent>
     <groupId>org.xwiki.contrib</groupId>
     <artifactId>parent-platform</artifactId>
-    <version>15.10-6</version>
+    <version>15.10-8</version>
   </parent>
   <artifactId>livedata-inline-table</artifactId>
   <packaging>pom</packaging>
